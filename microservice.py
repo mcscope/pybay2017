@@ -40,7 +40,7 @@ def render():
         </body>
     </html>
     """
-    return render_template_string(body_template, fortunes_divs=fortune_divs)
+    return render_template_string(body_template, fortune_divs=fortune_divs)
 
 if __name__ == '__main__':
     app.run(port=int(sys.argv[2]), debug=True)
