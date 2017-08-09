@@ -43,7 +43,6 @@ def parse_fortunes(fortune_file):
             current_fortune.append(line)
         else:
             complete_fortunes.append("".join(current_fortune))
-            current_fortune = []
 
     return complete_fortunes
 
