@@ -1,11 +1,28 @@
-#!/usr/bin/env python
-"""Implements Unix Fortune using 3 microservices and an API"""
+# #!/usr/bin/env python
+"""PyBay vprof remote profiling example
+
+First of all launch vprof in remote mode:
+
+    vprof -r
+
+and launch this script:
+
+    python microservice.py fetch 9001
+
+Then you can profile the fetch handler
+
+    curl http://127.0.0.1:9001/profile/fetch
+
+and
+
+curl 127.0.0.1:9001/profile/fetch
+"""
+
+from flask import Flask, redirect
 import os
-import os.path
-import sys
-from flask import Flask, request, render_template_string
-import requests
 import random
+from vprof import runner
+import sys
 
 FETCH_URL = "http://localhost:9001/fetch"
 RENDER_URL = "http://localhost:9002/render"
@@ -13,14 +30,34 @@ role = sys.argv[1]
 app = Flask(role)
 
 
-@app.route("/")
-def main():
+@app.route("/fetch")
+def fetch():
+    FORTUNE_DIR = "/usr/local/Cellar/fortune/9708/share/games/fortunes/"
 
-    fortunes = []
-    for _ in range(0, 3):
-        fortunes.append(requests.get(FETCH_URL).content)
+    all_fortunes = []
+    for filename in os.listdir(FORTUNE_DIR):
 
-    return requests.post(RENDER_URL, data={'fortunes': fortunes}).content
+        path = os.path.join(FORTUNE_DIR, filename)
+
+        if not os.path.isfile(path) or path.endswith(".dat"):
+            continue
+
+        with open(path, 'r') as fortune_file:
+            new_fortunes = parse_fortunes(fortune_file)
+            all_fortunes.extend(new_fortunes)
+
+    return random.choice(all_fortunes)
+
+
+@app.route('/profile/fetch', methods=['GET', 'POST'])
+def profiler_handler():
+    try:
+        runner.run(fetch, 'cmhp')
+    except:
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+
+    return redirect('/')
 
 
 def parse_fortunes(lines):
@@ -29,7 +66,9 @@ def parse_fortunes(lines):
     current_fortune_lines = []
     for line in lines:
         if line == FORTUNE_SEPERATOR:
-            fortunes.append("".join(current_fortune_lines))
+            found_fortune = "".join(current_fortune_lines)
+            if found_fortune not in served_fortunes:
+                fortunes.append(found_fortune)
             current_fortune_lines = []
         else:
             current_fortune_lines.append(line)
@@ -38,36 +77,5 @@ def parse_fortunes(lines):
 served_fortunes = []
 
 
-@app.route("/fetch")
-def fetch():
-    fortune_dir = "/usr/local/Cellar/fortune/9708/share/games/fortunes/"
-    os.chdir(fortune_dir)
-    fortune_files = [f for f in os.listdir(".")
-                     if os.path.isfile(f) and not f.endswith('.dat')]
-    all_fortunes = []
-    for path in fortune_files:
-
-        with open(path, 'r') as fortune_file:
-            all_fortunes.extend(parse_fortunes(fortune_file.readlines()))
-    return random.choice(all_fortunes)
-
-
-@app.route("/render", methods=["POST"])
-def render():
-    fortune_template = "<div style='margin:100px;'> {{fortune}} </div>"
-    fortune_divs = [render_template_string(fortune_template, fortune=fortune)
-                    for fortune in request.form.getlist("fortunes")]
-
-    body_template = """
-    <html>
-        <body>
-            <div style="width:50%; margin:auto; margin-top:100px;">
-                {{"".join(fortune_divs)}}
-            </div>
-        </body>
-    </html>
-    """
-    return render_template_string(body_template, fortune_divs=fortune_divs)
-
 if __name__ == '__main__':
-    app.run(port=int(sys.argv[2]), debug=True)
+    app.run(port=int(sys.argv[2]))
