@@ -25,7 +25,7 @@ Slides, links and screenshots are available here:
 
 ## Slides
 
-https://docs.google.com/presentation/d/1Uei-yk6xpDUOmAyvfXQd_3Gabsr7cx83SWPMOsPIfes/edit
+https://docs.google.com/presentation/d/1Uei-yk6xpDUOmAyvfXQd_3Gabsr7cx83SWPMOsPIfes/pub
 
 # Links to tools:
 
